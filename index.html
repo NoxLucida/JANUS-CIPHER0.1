@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0b0d10">
-<title>Janus Cipher v1.0</title>
+<title>Janus Cipher v1.1</title>
 <style>
   :root{
     --bg:#0b0d10; --panel:#14181d; --panel2:#1b2128; --text:#f3f5f7;
@@ -39,7 +39,7 @@
 <div class="app">
   <div class="title">
     <h1>JANUS CIPHER</h1>
-    <div class="badge">v1.0 · OFFLINE</div>
+    <div class="badge">v1.1 · OFFLINE</div>
   </div>
 
   <div class="card">
@@ -62,8 +62,9 @@
     <div class="status" id="status" role="status" aria-live="polite"></div>
   </div>
 
-  <div class="foot">For puzzles and casual messages. Not secure encryption. Avoid digits in original messages.</div>
-  <div class="foot">Janus Cipher v1.0 · Mirror alphabet + reversible row swap + repeat compression</div>
+  <div class="foot">For puzzles and casual messages. Not secure encryption. Write numbers as words; omit square brackets.</div>
+  <div class="foot">Janus Cipher v1.1 · Mirror alphabet + row swap + random 5/7/9 spaces</div>
+<div class="foot">Repeats 2–4 use counts. Brackets appear only before a space: X[2]7. Runs of 5+ stay uncompressed. Decode uses v1.1 rules.</div>
 </div>
 
 <script>
@@ -117,22 +118,23 @@ function rowCipher(text) {
   return result;
 }
 
-function compressRepeats(text) {
-  if (!text) return "";
+function compressRepeats(text, chooseSpace = () => "579"[Math.floor(Math.random() * 3)]) {
+  if (text.length > 100000) throw new Error("Message too long (maximum 100,000 characters).");
+  if (/[0-9\[\]]/.test(text)) throw new Error("Write numbers as words and omit square brackets in original messages.");
   let result = "";
-  let i = 0;
-
-  while (i < text.length) {
+  for (let i = 0; i < text.length;) {
     const char = text[i];
-
     if (/[A-Za-z]/.test(char)) {
       let count = 1;
-      while (i + count < text.length && text[i + count] === char) count++;
-      result += char;
-      if (count > 1) result += count;
+      while (text[i + count] === char) count++;
+      if (count >= 2 && count <= 4) {
+        result += char + (text[i + count] === " " ? "[" + count + "]" : count);
+      } else {
+        result += char.repeat(count);
+      }
       i += count;
     } else {
-      result += char;
+      result += char === " " ? chooseSpace() : char;
       i++;
     }
   }
@@ -140,35 +142,41 @@ function compressRepeats(text) {
 }
 
 function expandRepeats(text) {
-  let result = "";
-  let i = 0;
   if (text.length > 100000) throw new Error("Message too long (maximum 100,000 characters).");
-
-  while (i < text.length) {
-    const char = text[i];
-    result += char;
-    i++;
-
-    if (/[A-Za-z]/.test(char)) {
-      let number = "";
-      while (i < text.length && /[0-9]/.test(text[i])) number += text[i++];
-
-      if (number !== "") {
-        const count = parseInt(number, 10);
-        if (!Number.isSafeInteger(count) || count < 2 || result.length + count - 1 > 100000) throw new Error("Invalid repeat count or output too long.");
-        result += char.repeat(count - 1);
+  let result = "";
+  for (let i = 0; i < text.length;) {
+    const char = text[i++];
+    if (/[579]/.test(char)) {
+      result += " ";
+    } else if (/[A-Za-z]/.test(char)) {
+      let count = 1;
+      if (text[i] === "[") {
+        if (!/^[234]\][579]/.test(text.slice(i + 1))) throw new Error("Bracketed repeats must be [2], [3], or [4] immediately before a space marker.");
+        count = Number(text[i + 1]);
+        i += 3;
+      } else if (/[234]/.test(text[i] || "")) {
+        count = Number(text[i++]);
+        if (/[579]/.test(text[i] || "")) throw new Error("Use brackets around a repeat count immediately before a space marker.");
       }
+      result += char.repeat(count);
+    } else {
+      if (/[0-9\[\]]/.test(char)) throw new Error("Invalid ciphertext digit or bracket.");
+      result += char;
     }
+    if (result.length > 100000) throw new Error("Decoded message too long (maximum 100,000 characters).");
   }
   return result;
 }
 
 function encodeMessage() {
   const input = document.getElementById("input").value;
-  const stage1 = atbash(input);
-  const stage2 = rowCipher(stage1);
-  document.getElementById("output").value = compressRepeats(stage2);
-  setStatus("Encoded.");
+  try {
+    document.getElementById("output").value = compressRepeats(rowCipher(atbash(input)));
+    setStatus("Encoded. Spaces randomly use 5, 7, or 9.");
+  } catch (error) {
+    document.getElementById("output").value = "";
+    setStatus(error.message);
+  }
 }
 
 function decodeMessage() {
@@ -217,19 +225,13 @@ function setStatus(msg) {
   document.getElementById("status").textContent = msg;
 }
 
-// Self-tests, including the previously broken Y/Z boundary.
+// Check the reversible mapping and separator-aware compression.
 (function(){
-  const tests = [
-    ["MEET ME SOON", "PX2E PX FJ2O"],
-    ["YAZY", null],
-    ["XYZ", null]
-  ];
-
   const roundTrip = s => atbash(rowCipher(expandRepeats(compressRepeats(rowCipher(atbash(s))))));
-  const known = compressRepeats(rowCipher(atbash(tests[0][0])));
-
-  if (known !== tests[0][1] || roundTrip("YAZY") !== "YAZY" || roundTrip("XYZ") !== "XYZ") {
-    document.getElementById("status").textContent = "Cipher self-test failed.";
+  const tests = ["HELLO", "books", "i can tell you", "AAAAA", "AAAAAA ", "YAZY", "XYZ", "  tell  ", "ball\nbook!", ""];
+  if (tests.some(s => roundTrip(s) !== s) ||
+      compressRepeats("xx xxx xxxxx ", () => "7") !== "x[2]7x[3]7xxxxx7") {
+    setStatus("Cipher self-test failed.");
   }
 })();
 </script>
