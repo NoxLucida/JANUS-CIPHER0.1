@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<title>Janus Cipher v1.0</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#14181d; --panel2:#1b2128; --text:#f3f5f7;
+    --muted:#9ba6b2; --line:#2a323b; --accent:#e8edf2; --accentText:#0b0d10;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  body{padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
+  .app{max-width:720px;margin:0 auto;padding:24px 0 40px}
+  .title{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+  h1{font-size:28px;margin:0;letter-spacing:.5px}
+  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:6px 10px;border-radius:999px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+  label{display:block;font-size:13px;color:var(--muted);margin:0 0 8px 2px}
+  textarea{width:100%;min-height:150px;resize:vertical;border:1px solid var(--line);
+    border-radius:14px;background:var(--panel2);color:var(--text);padding:14px;
+    font-size:18px;line-height:1.45;outline:none}
+  textarea:focus{border-color:#53606e}
+  .buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  button{border:0;border-radius:13px;padding:14px 16px;font-size:16px;font-weight:700;
+    cursor:pointer;background:#2a323b;color:var(--text)}
+  button.primary{background:var(--accent);color:var(--accentText)}
+  button:active{transform:translateY(1px)}
+  .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
+  .status{min-height:20px;color:var(--muted);font-size:13px;margin-top:10px;text-align:center}
+  .foot{color:#65717d;font-size:12px;text-align:center;margin-top:16px}
+  @media (max-width:460px){.actions{grid-template-columns:1fr}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="title">
+    <h1>JANUS CIPHER</h1>
+    <div class="badge">v1.0 · OFFLINE</div>
+  </div>
+
+  <div class="card">
+    <label for="input">INPUT</label>
+    <textarea id="input" placeholder="Type or paste a message..."></textarea>
+    <div class="buttons">
+      <button class="primary" onclick="encodeMessage()">ENCODE</button>
+      <button onclick="decodeMessage()">DECODE</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="output">OUTPUT</label>
+    <textarea id="output" readonly placeholder="Result appears here..."></textarea>
+    <div class="actions">
+      <button onclick="copyResult()">COPY</button>
+      <button onclick="swapResult()">USE AS INPUT</button>
+      <button onclick="clearAll()">CLEAR</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="foot">For puzzles and casual messages. Not secure encryption. Avoid digits in original messages.</div>
+  <div class="foot">Janus Cipher v1.0 · Mirror alphabet + reversible row swap + repeat compression</div>
+</div>
+
+<script>
+function atbash(text) {
+  let result = "";
+  for (let char of text) {
+    if (char >= 'A' && char <= 'Z') {
+      result += String.fromCharCode(90 - (char.charCodeAt(0) - 65));
+    } else if (char >= 'a' && char <= 'z') {
+      result += String.fromCharCode(122 - (char.charCodeAt(0) - 97));
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+
+function rowCipher(text) {
+  let result = "";
+
+  for (let char of text) {
+    const isLower = char >= 'a' && char <= 'z';
+    const upper = char.toUpperCase();
+
+    if (upper < 'A' || upper > 'Z') {
+      result += char;
+      continue;
+    }
+
+    // Special terminal pair: Y <-> Z.
+    // This makes the whole row cipher one-to-one and self-reversing.
+    if (upper === 'Y' || upper === 'Z') {
+      let swapped = upper === 'Y' ? 'Z' : 'Y';
+      result += isLower ? swapped.toLowerCase() : swapped;
+      continue;
+    }
+
+    const index = upper.charCodeAt(0) - 65;
+    const row = Math.floor(index / 2);
+    const column = index % 2;
+
+    // AB <-> CD, EF <-> GH, IJ <-> KL,
+    // MN <-> OP, QR <-> ST, UV <-> WX.
+    const newRow = (row % 2 === 0) ? row + 1 : row - 1;
+    const newIndex = newRow * 2 + column;
+
+    let newChar = String.fromCharCode(65 + newIndex);
+    result += isLower ? newChar.toLowerCase() : newChar;
+  }
+
+  return result;
+}
+
+function compressRepeats(text) {
+  if (!text) return "";
+  let result = "";
+  let i = 0;
+
+  while (i < text.length) {
+    const char = text[i];
+
+    if (/[A-Za-z]/.test(char)) {
+      let count = 1;
+      while (i + count < text.length && text[i + count] === char) count++;
+      result += char;
+      if (count > 1) result += count;
+      i += count;
+    } else {
+      result += char;
+      i++;
+    }
+  }
+  return result;
+}
+
+function expandRepeats(text) {
+  let result = "";
+  let i = 0;
+  if (text.length > 100000) throw new Error("Message too long (maximum 100,000 characters).");
+
+  while (i < text.length) {
+    const char = text[i];
+    result += char;
+    i++;
+
+    if (/[A-Za-z]/.test(char)) {
+      let number = "";
+      while (i < text.length && /[0-9]/.test(text[i])) number += text[i++];
+
+      if (number !== "") {
+        const count = parseInt(number, 10);
+        if (!Number.isSafeInteger(count) || count < 2 || result.length + count - 1 > 100000) throw new Error("Invalid repeat count or output too long.");
+        result += char.repeat(count - 1);
+      }
+    }
+  }
+  return result;
+}
+
+function encodeMessage() {
+  const input = document.getElementById("input").value;
+  const stage1 = atbash(input);
+  const stage2 = rowCipher(stage1);
+  document.getElementById("output").value = compressRepeats(stage2);
+  setStatus("Encoded.");
+}
+
+function decodeMessage() {
+  const input = document.getElementById("input").value;
+  try {
+    const stage1 = expandRepeats(input);
+    const stage2 = rowCipher(stage1);
+    document.getElementById("output").value = atbash(stage2);
+    setStatus("Decoded.");
+  } catch (error) {
+    document.getElementById("output").value = "";
+    setStatus(error.message);
+  }
+}
+
+async function copyResult() {
+  const output = document.getElementById("output").value;
+  if (!output) return setStatus("Nothing to copy.");
+
+  try {
+    await navigator.clipboard.writeText(output);
+    setStatus("Copied.");
+  } catch (e) {
+    const box = document.getElementById("output");
+    box.removeAttribute("readonly");
+    box.select();
+    document.execCommand("copy");
+    box.setAttribute("readonly", "");
+    setStatus("Copied.");
+  }
+}
+
+function swapResult() {
+  document.getElementById("input").value = document.getElementById("output").value;
+  document.getElementById("output").value = "";
+  setStatus("Output moved to input.");
+}
+
+function clearAll() {
+  document.getElementById("input").value = "";
+  document.getElementById("output").value = "";
+  setStatus("");
+}
+
+function setStatus(msg) {
+  document.getElementById("status").textContent = msg;
+}
+
+// Self-tests, including the previously broken Y/Z boundary.
+(function(){
+  const tests = [
+    ["MEET ME SOON", "PX2E PX FJ2O"],
+    ["YAZY", null],
+    ["XYZ", null]
+  ];
+
+  const roundTrip = s => atbash(rowCipher(expandRepeats(compressRepeats(rowCipher(atbash(s))))));
+  const known = compressRepeats(rowCipher(atbash(tests[0][0])));
+
+  if (known !== tests[0][1] || roundTrip("YAZY") !== "YAZY" || roundTrip("XYZ") !== "XYZ") {
+    document.getElementById("status").textContent = "Cipher self-test failed.";
+  }
+})();
+</script>
+</body>
+</html>
