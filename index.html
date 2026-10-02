@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#101211">
 <meta name="description" content="JANUS: a four-bank puzzle cipher. Mirror, shift and transmit in three-hour windows.">
-<title>JANUS / Cipher v2.1</title>
+<title>JANUS / Cipher v2.2</title>
 <style>
 :root{color-scheme:dark;--bg:#101211;--surface:#181b19;--raised:#202420;--line:#343b34;--text:#eef0e7;--muted:#a4aea1;--gold:#dbc18b;--gold-dark:#29261d;--error:#ffb4a7;--mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:16px;line-height:1.5;padding:env(safe-area-inset-top) 22px env(safe-area-inset-bottom)}
@@ -24,7 +24,7 @@ button,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cu
 <main class="app">
   <header class="masthead">
     <div class="brand"><div class="sigil" aria-hidden="true">J</div><div><h1>JANUS</h1><div class="eyebrow">Four-hand cipher</div></div></div>
-    <div class="edition"><strong>EDITION 02.1</strong><span class="eyebrow">Works offline</span></div>
+    <div class="edition"><strong>EDITION 02.2</strong><span class="eyebrow">Works offline</span></div>
   </header>
   <section class="session" aria-label="Current transmission window">
     <div><div class="eyebrow" id="session-label">Encoding bank</div><h2 id="active-name">Loading bank</h2><p><span class="bank-prefix" id="active-code"></span><span id="window-label"></span></p></div>
@@ -50,7 +50,6 @@ button,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cu
     </div>
     <div class="status" id="status" role="status" aria-live="polite">Ready. Messages stay on this device.</div>
   </section>
-  <p class="storage-note" id="storage-note" hidden>Bank memory is unavailable. Keep this page open to retain the current encoding bank.</p>
   <section aria-label="Hand banks">
     <div class="section-head"><h2>THE HAND BANKS</h2><span>14 rows · 4 fixed stamps</span></div>
     <div class="banks" id="banks"></div>
@@ -65,11 +64,11 @@ button,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cu
       <h3>Preparing your text</h3>
       <p>Numbers become words: 42 becomes FORTY TWO; 7.5 becomes SEVEN POINT FIVE. Leading zeros and numbers longer than 15 digits are read digit by digit. Punctuation is omitted, apostrophes are removed, and word gaps are standardised. For dates, fractions, phone numbers or special meanings, write the words yourself and check “Prepared message”.</p>
       <h3>Offline operation</h3>
-      <p>Each browser remembers one active bank for both encoding and decoding and chooses a different one when a new window begins. A message cannot switch it. The sender and receiver must have the same bank active in the same window. Browsers choose independently, so a friend with a different active bank cannot decode your message, even before expiry. Only bank state is saved, never your messages.</p>
-      <p>Keep your device clock correct. Bank matching and expiry are local app rules that can be bypassed by editing the code, not secure encryption or destruction. JANUS is a puzzle cipher, not secure encryption. This edition does not decode v1.1 transmissions.</p>
+      <p>All devices running v2.2 use the same clock-based, pseudorandom bank schedule. A different bank takes over every three hours, at the same instant worldwide. Opening the app, refreshing it or changing device timezone does not change the schedule. A message cannot switch the active bank. No bank state or messages are saved.</p>
+      <p>Both people must use v2.2 and keep their device clocks correct. Older versions use independent banks and may not match the shared schedule. Bank matching and expiry are local app rules that can be bypassed by editing the code, not secure encryption or destruction. JANUS is a puzzle cipher, not secure encryption. This edition does not decode v1.1 transmissions.</p>
     </div><div><table class="key-table"><caption>Characters and fixed row directions</caption><thead><tr><th scope="col">Row</th><th scope="col">Pair</th><th scope="col">RHB</th><th scope="col">BHB</th><th scope="col">LHB</th><th scope="col">FHB</th></tr></thead><tbody id="key-rows"></tbody></table><p style="margin-top:12px">The final pair contains the characters 1 and 0. They are separate from the row direction values.</p></div></div>
   </details>
-  <footer><p>JANUS v2.1 · For puzzles and casual messages.</p><p>Mirror / Shift / Transmit</p></footer>
+  <footer><p>JANUS v2.2 · For puzzles and casual messages.</p><p>Mirror / Shift / Transmit</p></footer>
   <noscript><p>This cipher needs JavaScript enabled to encode or decode messages.</p></noscript>
 </main>
 <script id="cipher-engine">
@@ -113,9 +112,29 @@ const Janus = (() => {
     do { crypto.getRandomValues(buf); } while (buf[0] >= ceiling);
     return buf[0] % n;
   }
-  function chooseBank(previous, random = randomInt) {
-    const choices = BANKS.filter(b => b.id !== previous);
-    return choices[random(choices.length)].id;
+  // Shared pseudorandom schedule, version 1. No browser-specific state.
+  // Each four-window block is a permutation. Swapping only its first two
+  // entries prevents a repeat at the boundary without changing its last bank.
+  function scheduleOrder(block) {
+    let seed = (block ^ 0x4a414e55) >>> 0;
+    const next = () => {
+      seed = (seed + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+      return (t ^ (t >>> 14)) >>> 0;
+    };
+    const order = BANKS.map(b => b.id);
+    for (let i=3;i>0;i--) {
+      const j=next() % (i+1);
+      [order[i],order[j]]=[order[j],order[i]];
+    }
+    return order;
+  }
+  function scheduledBank(now=Date.now()) {
+    const slot=Math.floor((now+OFFSET)/WINDOW), block=Math.floor(slot/4);
+    const order=scheduleOrder(block), previousLast=scheduleOrder(block-1)[3];
+    if (order[0]===previousLast) [order[0],order[1]]=[order[1],order[0]];
+    return order[((slot%4)+4)%4];
   }
   const ONES = ["ZERO","ONE","TWO","THREE","FOUR","FIVE","SIX","SEVEN","EIGHT","NINE","TEN","ELEVEN","TWELVE","THIRTEEN","FOURTEEN","FIFTEEN","SIXTEEN","SEVENTEEN","EIGHTEEN","NINETEEN"];
   const TENS = ["","","TWENTY","THIRTY","FORTY","FIFTY","SIXTY","SEVENTY","EIGHTY","NINETY"];
@@ -173,35 +192,16 @@ const Janus = (() => {
     if (/[01]/.test(egg)) throw new Error("This ciphertext does not match its bank. Check the bank ID and copied message.");
     return {text:mirror(egg), bankID, start};
   }
-  return Object.freeze({BANKS,SYMBOLS,WINDOW,OFFSET,MAX,byID,maps,windowStart,windowID,parseWindow,randomInt,chooseBank,normalize,mirror,encode,decode});
+  return Object.freeze({BANKS,SYMBOLS,WINDOW,OFFSET,MAX,byID,maps,windowStart,windowID,parseWindow,randomInt,scheduledBank,normalize,mirror,encode,decode});
 })();
 </script>
 <script id="cipher-interface">
 "use strict";
 (() => {
   const $ = id => document.getElementById(id);
-  const STORAGE_KEY = "janus.v2.encoder";
-  let mode="encode", encoder=null, lastResult=null, storageOK=true, busy=false;
-  function readSaved() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const s = JSON.parse(raw);
-      return s && Janus.byID(s.bankID) && Number.isSafeInteger(s.start) && s.start === Janus.windowStart(s.start) ? s : null;
-    } catch { storageOK=false; return null; }
-  }
-  function save(s) {
-    try { localStorage.setItem(STORAGE_KEY,JSON.stringify(s)); } catch { storageOK=false; }
-    $("storage-note").hidden=storageOK;
-  }
+  let mode="encode", lastResult=null, busy=false;
   function getEncoder(now=Date.now()) {
-    const start=Janus.windowStart(now), saved=readSaved();
-    if (saved && saved.start===start) encoder=saved;
-    else if (!encoder || encoder.start!==start) {
-      encoder={bankID:Janus.chooseBank((saved || encoder || {}).bankID), start}; save(encoder);
-    }
-    $("storage-note").hidden=storageOK;
-    return encoder;
+    return {bankID:Janus.scheduledBank(now),start:Janus.windowStart(now)};
   }
   function setStatus(message, kind="") { $("status").textContent=message; $("status").dataset.kind=kind; }
   function timeLabel(start) { const d=new Date(start+Janus.OFFSET); return String(d.getUTCHours()).padStart(2,"0")+":00"; }
@@ -209,7 +209,7 @@ const Janus = (() => {
     const now=Date.now(), outgoing=getEncoder(now), start=Janus.windowStart(now);
     const active = outgoing;
     const bank=active ? Janus.byID(active.bankID) : null;
-    $("session-label").textContent="Active bank · locked";
+    $("session-label").textContent="Shared bank · locked";
     $("active-name").textContent=bank ? bank.name+" Bank" : "Awaiting transmission";
     $("active-code").textContent=bank ? bank.id+" / " : "";
     $("window-label").textContent=timeLabel(start)+"–"+timeLabel(start+Janus.WINDOW)+" PERTH";
@@ -261,8 +261,7 @@ const Janus = (() => {
       setStatus(mode==="encode" ? "Encoded. Bank ID attached; spaces use random 7, 8 or 9." : "Decoded. Bank and current window verified.","success"); counts(); refresh();
     };
     try {
-      if (navigator.locks) await navigator.locks.request(STORAGE_KEY,perform);
-      else perform();
+      perform();
     } catch(e) { resetOutput(); setStatus(e.message,"error"); refresh(); }
     finally { busy=false; $("run-button").disabled=false; }
   }
@@ -294,7 +293,6 @@ const Janus = (() => {
   $("swap-button").addEventListener("click",()=>{if(busy)return;const value=$("output").value;if(!value)return;$("input").value=value;setMode(mode==="encode"?"decode":"encode");$("input").focus();});
   $("input").addEventListener("input",counts);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh();});
-  window.addEventListener("storage",e=>{if(e.key===STORAGE_KEY)refresh();});
   setMode("encode"); setInterval(refresh,1000);
 })();
 </script>
