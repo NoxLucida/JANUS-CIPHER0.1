@@ -3,236 +3,299 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0b0d10">
-<title>Janus Cipher v1.1</title>
+<meta name="theme-color" content="#101211">
+<meta name="description" content="JANUS: a four-bank puzzle cipher. Mirror, shift and transmit in three-hour windows.">
+<title>JANUS / Cipher v2.1</title>
 <style>
-  :root{
-    --bg:#0b0d10; --panel:#14181d; --panel2:#1b2128; --text:#f3f5f7;
-    --muted:#9ba6b2; --line:#2a323b; --accent:#e8edf2; --accentText:#0b0d10;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-  body{padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
-  .app{max-width:720px;margin:0 auto;padding:24px 0 40px}
-  .title{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
-  h1{font-size:28px;margin:0;letter-spacing:.5px}
-  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:6px 10px;border-radius:999px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
-  label{display:block;font-size:13px;color:var(--muted);margin:0 0 8px 2px}
-  textarea{width:100%;min-height:150px;resize:vertical;border:1px solid var(--line);
-    border-radius:14px;background:var(--panel2);color:var(--text);padding:14px;
-    font-size:18px;line-height:1.45;outline:none}
-  textarea:focus{border-color:#53606e}
-  .buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-  button{border:0;border-radius:13px;padding:14px 16px;font-size:16px;font-weight:700;
-    cursor:pointer;background:#2a323b;color:var(--text)}
-  button.primary{background:var(--accent);color:var(--accentText)}
-  button:active{transform:translateY(1px)}
-  .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
-  .status{min-height:20px;color:var(--muted);font-size:13px;margin-top:10px;text-align:center}
-  .foot{color:#65717d;font-size:12px;text-align:center;margin-top:16px}
-  @media (max-width:460px){.actions{grid-template-columns:1fr}h1{font-size:24px}}
+:root{color-scheme:dark;--bg:#101211;--surface:#181b19;--raised:#202420;--line:#343b34;--text:#eef0e7;--muted:#a4aea1;--gold:#dbc18b;--gold-dark:#29261d;--error:#ffb4a7;--mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:16px;line-height:1.5;padding:env(safe-area-inset-top) 22px env(safe-area-inset-bottom)}
+button,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:5px}button{transition:background .15s,color .15s}button:not(:disabled):hover{filter:brightness(1.15)}
+.app{max-width:1140px;margin:auto;padding:28px 0 30px}.masthead{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:22px}.brand{display:flex;align-items:center;gap:16px}.sigil{width:44px;height:44px;border:1px solid var(--gold);display:grid;place-items:center;font:25px Georgia,serif;color:var(--gold)}h1{font:normal 34px/1 Georgia,"Times New Roman",serif;letter-spacing:.15em;margin:0}.eyebrow{font:12px/1.5 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}.brand .eyebrow{margin-top:7px}.edition{text-align:right}.edition strong{display:block;color:var(--gold);font:13px var(--mono);margin-bottom:5px}
+.session{display:grid;grid-template-columns:1fr auto;gap:20px;padding:25px 0 22px;align-items:center}.session h2{font:normal 29px/1.2 Georgia,serif;margin:6px 0}.session p{font:13px/1.6 var(--mono);margin:0;color:var(--muted)}.session .bank-prefix{color:var(--gold)}.timer{text-align:right}.timer strong{font:27px var(--mono);font-variant-numeric:tabular-nums;color:var(--gold);display:block}.timer span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.progress{height:2px;background:var(--line);margin-bottom:22px}.progress div{height:100%;background:var(--gold);width:100%}
+.workspace{border:1px solid var(--line);background:var(--surface);border-radius:5px;overflow:hidden}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}.tabs{display:flex;gap:4px;padding:4px;background:var(--bg);border:1px solid var(--line);border-radius:4px}.tabs button{border:0;color:var(--muted);background:transparent;padding:9px 21px;font-size:14px;border-radius:2px;font-weight:600}.tabs button[aria-pressed="true"]{background:var(--gold);color:#1b1d17}.toolbar-note{font:12px var(--mono);color:var(--muted)}.panes{display:grid;grid-template-columns:1fr 1fr}.pane{padding:21px;min-width:0}.pane+.pane{border-left:1px solid var(--line);background:#151815}.field-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}.field-head label{font:13px var(--mono);letter-spacing:.08em}.count{font:12px var(--mono);color:var(--muted)}textarea{width:100%;display:block;min-height:225px;resize:vertical;background:transparent;color:var(--text);padding:12px;border:1px solid transparent;border-radius:3px;font:17px/1.7 var(--mono);outline:none;overflow-wrap:anywhere}textarea:focus{border-color:var(--gold)}textarea::placeholder{color:#788374}#output{color:var(--gold)}.hint{color:var(--muted);font-size:13px;min-height:40px;margin:13px 0}.action-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-height:46px}.primary{background:var(--gold);color:#1b1d17;border:1px solid var(--gold);padding:12px 22px;border-radius:3px;font-weight:700;flex:1}.secondary{background:transparent;border:1px solid var(--line);color:var(--text);padding:11px 16px;border-radius:3px;font-size:14px}.plain{border:0;background:transparent;color:var(--muted);padding:12px;font-size:14px}.status{border-top:1px solid var(--line);padding:12px 20px;min-height:47px;color:var(--muted);font-size:14px}.status[data-kind="error"]{color:var(--error);background:#2a1d19}.status[data-kind="success"]{color:var(--gold)}
+.preview{margin:14px 0 0;border:1px solid var(--line);padding:10px 12px;border-radius:3px}.preview summary{font-size:13px;color:var(--muted);cursor:pointer}.preview p{font:13px/1.6 var(--mono);overflow-wrap:anywhere;white-space:pre-wrap;margin:10px 0 0;max-height:150px;overflow:auto}.section-head{display:flex;justify-content:space-between;align-items:center;margin:26px 0 12px;gap:10px}.section-head h2{font:13px var(--mono);letter-spacing:.1em;margin:0}.section-head span{font-size:12px;color:var(--muted)}.banks{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.bank{border:1px solid var(--line);border-radius:3px;padding:14px 16px;min-width:0}.bank.active{border-color:var(--gold);background:var(--gold-dark)}.bank-top{display:flex;justify-content:space-between;gap:8px;align-items:center}.bank-code{font:13px var(--mono);color:var(--muted)}.bank-state{font:10px var(--mono);letter-spacing:.05em;color:var(--gold);min-height:15px}.bank h3{font-weight:500;font-size:16px;margin:9px 0 6px}.bits{font:12px var(--mono);letter-spacing:.055em;color:var(--muted);overflow-wrap:anywhere}.bank.active .bits,.bank.active .bank-code{color:var(--gold)}
+.guide{margin-top:22px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:15px 0}.guide>summary{cursor:pointer;color:var(--muted);font-size:14px}.guide-body{display:grid;grid-template-columns:1fr 1fr;gap:28px;padding:18px 0 4px}.guide h3{font-size:16px;font-weight:600;margin:0 0 8px}.guide p,.guide li{font-size:14px;color:var(--muted)}.guide p{margin:0 0 12px}.guide ol{padding-left:20px;margin:0 0 18px}.guide li{margin:6px 0}.guide code{font-family:var(--mono);color:var(--gold);overflow-wrap:anywhere}.key-table{border-collapse:collapse;width:100%;font:13px var(--mono);text-align:center}.key-table th,.key-table td{padding:5px 8px;border-bottom:1px solid var(--line)}.key-table th{font-weight:400;color:var(--muted)}.key-table caption{text-align:left;margin-bottom:10px;color:var(--muted);font:14px system-ui,sans-serif}footer{display:flex;justify-content:space-between;gap:20px;margin-top:20px;color:var(--muted);font-size:12px}footer p{margin:0}.storage-note{color:var(--error);font-size:13px;margin:12px 0 0} [hidden]{display:none!important}
+@media(max-width:760px){.app{padding-top:20px}.panes{grid-template-columns:1fr}.pane+.pane{border-left:0;border-top:1px solid var(--line)}textarea{min-height:155px}.banks{grid-template-columns:1fr 1fr}.guide-body{grid-template-columns:1fr}.toolbar-note{display:none}.pane{padding:17px}.hint{min-height:0}.session h2{font-size:25px}.timer strong{font-size:23px}footer{flex-direction:column;gap:6px}}
+@media(max-width:400px){body{padding-left:14px;padding-right:14px}h1{font-size:28px}.sigil{width:36px;height:40px}.brand{gap:10px}.edition .eyebrow{display:none}.session{gap:10px}.session h2{font-size:23px}.session p{font-size:11px}.timer strong{font-size:20px}.bank{padding:12px}.bits{letter-spacing:0}.tabs{width:100%}.tabs button{flex:1;padding-left:12px;padding-right:12px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="title">
-    <h1>JANUS CIPHER</h1>
-    <div class="badge">v1.1 · OFFLINE</div>
-  </div>
-
-  <div class="card">
-    <label for="input">INPUT</label>
-    <textarea id="input" placeholder="Type or paste a message..."></textarea>
-    <div class="buttons">
-      <button class="primary" onclick="encodeMessage()">ENCODE</button>
-      <button onclick="decodeMessage()">DECODE</button>
+<main class="app">
+  <header class="masthead">
+    <div class="brand"><div class="sigil" aria-hidden="true">J</div><div><h1>JANUS</h1><div class="eyebrow">Four-hand cipher</div></div></div>
+    <div class="edition"><strong>EDITION 02.1</strong><span class="eyebrow">Works offline</span></div>
+  </header>
+  <section class="session" aria-label="Current transmission window">
+    <div><div class="eyebrow" id="session-label">Encoding bank</div><h2 id="active-name">Loading bank</h2><p><span class="bank-prefix" id="active-code"></span><span id="window-label"></span></p></div>
+    <div class="timer"><div class="eyebrow">Window closes in</div><strong id="countdown">00:00:00</strong><span>PERTH · UTC+08:00</span></div>
+  </section>
+  <div class="progress" aria-hidden="true"><div id="progress-fill"></div></div>
+  <section class="workspace" aria-label="Cipher workspace">
+    <div class="toolbar"><div class="tabs" role="group" aria-label="Cipher mode"><button id="encode-tab" aria-pressed="true">Encode</button><button id="decode-tab" aria-pressed="false">Decode</button></div><span class="toolbar-note" id="flow-label">01 MIRROR / 02 HAND BANK</span></div>
+    <div class="panes">
+      <div class="pane">
+        <div class="field-head"><label id="input-label" for="input">YOUR MESSAGE</label><span class="count" id="input-count">0 characters</span></div>
+        <textarea id="input" maxlength="100000" spellcheck="false" autocomplete="off" autocapitalize="off" aria-describedby="input-hint" placeholder="Write your message here..."></textarea>
+        <p class="hint" id="input-hint">Numbers become words. Punctuation is omitted. Letters become uppercase.</p>
+        <div class="action-row"><button class="primary" id="run-button">Encode message</button><button class="plain" id="clear-button">Clear</button></div>
+        <details class="preview" id="preview-box" hidden><summary>Prepared message</summary><p id="prepared-text"></p></details>
+      </div>
+      <div class="pane">
+        <div class="field-head"><label id="output-label" for="output">TRANSMISSION</label><span class="count" id="output-count">0 characters</span></div>
+        <textarea id="output" readonly spellcheck="false" aria-describedby="output-hint" placeholder="Your encoded transmission will appear here."></textarea>
+        <p class="hint" id="output-hint">The bank ID travels with your message. Copy the complete transmission.</p>
+        <div class="action-row"><button class="secondary" id="copy-button" disabled>Copy result</button><button class="secondary" id="swap-button" disabled>Use as input</button></div>
+      </div>
     </div>
-  </div>
-
-  <div class="card">
-    <label for="output">OUTPUT</label>
-    <textarea id="output" readonly placeholder="Result appears here..."></textarea>
-    <div class="actions">
-      <button onclick="copyResult()">COPY</button>
-      <button onclick="swapResult()">USE AS INPUT</button>
-      <button onclick="clearAll()">CLEAR</button>
-    </div>
-    <div class="status" id="status" role="status" aria-live="polite"></div>
-  </div>
-
-  <div class="foot">For puzzles and casual messages. Not secure encryption. Write numbers as words; omit square brackets.</div>
-  <div class="foot">Janus Cipher v1.1 · Mirror alphabet + row swap + random 5/7/9 spaces</div>
-<div class="foot">Repeats 2–4 use counts. Brackets appear only before a space: X[2]7. Runs of 5+ stay uncompressed. Decode uses v1.1 rules.</div>
-</div>
-
-<script>
-function atbash(text) {
-  let result = "";
-  for (let char of text) {
-    if (char >= 'A' && char <= 'Z') {
-      result += String.fromCharCode(90 - (char.charCodeAt(0) - 65));
-    } else if (char >= 'a' && char <= 'z') {
-      result += String.fromCharCode(122 - (char.charCodeAt(0) - 97));
-    } else {
-      result += char;
+    <div class="status" id="status" role="status" aria-live="polite">Ready. Messages stay on this device.</div>
+  </section>
+  <p class="storage-note" id="storage-note" hidden>Bank memory is unavailable. Keep this page open to retain the current encoding bank.</p>
+  <section aria-label="Hand banks">
+    <div class="section-head"><h2>THE HAND BANKS</h2><span>14 rows · 4 fixed stamps</span></div>
+    <div class="banks" id="banks"></div>
+  </section>
+  <details class="guide"><summary>The rules &amp; bank reference</summary>
+    <div class="guide-body"><div>
+      <h3>One message. Two transformations.</h3>
+      <ol><li><strong>Egg transmission:</strong> mirror each letter, A to Z, B to Y, and so on.</li><li><strong>Golden rule:</strong> read the bank's row value. 0 moves up one row; 1 moves down. Stay in the same column and wrap around at either end.</li><li>Replace each space with a randomly selected 7, 8 or 9. Attach the bank and window ID.</li></ol>
+      <h3>Reading a transmission</h3>
+      <p><code>[LHB-20261002-1800]</code> means Left Hand Bank, 2 October 2026, 18:00 to 21:00 Perth time. The decoder first checks that the message bank matches this browser's active bank. Only then does it reverse the row mapping and the mirror.</p>
+      <p>Windows begin at 00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00 and 21:00 in Perth. Decoding is allowed only within the message's own window, even if its bank returns later.</p>
+      <h3>Preparing your text</h3>
+      <p>Numbers become words: 42 becomes FORTY TWO; 7.5 becomes SEVEN POINT FIVE. Leading zeros and numbers longer than 15 digits are read digit by digit. Punctuation is omitted, apostrophes are removed, and word gaps are standardised. For dates, fractions, phone numbers or special meanings, write the words yourself and check “Prepared message”.</p>
+      <h3>Offline operation</h3>
+      <p>Each browser remembers one active bank for both encoding and decoding and chooses a different one when a new window begins. A message cannot switch it. The sender and receiver must have the same bank active in the same window. Browsers choose independently, so a friend with a different active bank cannot decode your message, even before expiry. Only bank state is saved, never your messages.</p>
+      <p>Keep your device clock correct. Bank matching and expiry are local app rules that can be bypassed by editing the code, not secure encryption or destruction. JANUS is a puzzle cipher, not secure encryption. This edition does not decode v1.1 transmissions.</p>
+    </div><div><table class="key-table"><caption>Characters and fixed row directions</caption><thead><tr><th scope="col">Row</th><th scope="col">Pair</th><th scope="col">RHB</th><th scope="col">BHB</th><th scope="col">LHB</th><th scope="col">FHB</th></tr></thead><tbody id="key-rows"></tbody></table><p style="margin-top:12px">The final pair contains the characters 1 and 0. They are separate from the row direction values.</p></div></div>
+  </details>
+  <footer><p>JANUS v2.1 · For puzzles and casual messages.</p><p>Mirror / Shift / Transmit</p></footer>
+  <noscript><p>This cipher needs JavaScript enabled to encode or decode messages.</p></noscript>
+</main>
+<script id="cipher-engine">
+"use strict";
+const Janus = (() => {
+  const SYMBOLS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ10";
+  const HOUR = 3600000, WINDOW = 3 * HOUR, OFFSET = 8 * HOUR, MAX = 100000;
+  const BANKS = Object.freeze([
+    Object.freeze({id:"RHB", name:"Right Hand", stamp:"00000000000000"}),
+    Object.freeze({id:"BHB", name:"Back Hand", stamp:"11111111111111"}),
+    Object.freeze({id:"LHB", name:"Left Hand", stamp:"10101010101010"}),
+    Object.freeze({id:"FHB", name:"Fore Hand", stamp:"01010101010101"})
+  ]);
+  const byID = id => BANKS.find(b => b.id === id);
+  const maps = {};
+  for (const bank of BANKS) {
+    const forward = {}, reverse = {};
+    [...SYMBOLS].forEach((char, index) => {
+      const row = Math.floor(index / 2), column = index % 2;
+      const target = SYMBOLS[((row + (bank.stamp[row] === "0" ? -1 : 1) + 14) % 14) * 2 + column];
+      if (Object.hasOwn(reverse, target)) throw new Error("Bank mapping contains a collision.");
+      forward[char] = target; reverse[target] = char;
+    });
+    maps[bank.id] = Object.freeze({forward:Object.freeze(forward), reverse:Object.freeze(reverse)});
+  }
+  const pad = (n, length=2) => String(n).padStart(length,"0");
+  const windowStart = now => Math.floor((now + OFFSET) / WINDOW) * WINDOW - OFFSET;
+  function windowID(start) {
+    const d = new Date(start + OFFSET);
+    return pad(d.getUTCFullYear(),4) + pad(d.getUTCMonth()+1) + pad(d.getUTCDate()) + "-" + pad(d.getUTCHours()) + "00";
+  }
+  function parseWindow(date, time) {
+    const year = +date.slice(0,4), month = +date.slice(4,6), day = +date.slice(6,8), hour = +time.slice(0,2);
+    if (year < 2000 || hour > 21 || hour % 3 !== 0 || time.slice(2) !== "00") throw new Error("Invalid three-hour window in the message ID.");
+    const start = Date.UTC(year,month-1,day,hour) - OFFSET;
+    if (windowID(start) !== date + "-" + time) throw new Error("Invalid date in the message ID.");
+    return start;
+  }
+  function randomInt(n) {
+    const buf = new Uint32Array(1), ceiling = Math.floor(4294967296 / n) * n;
+    do { crypto.getRandomValues(buf); } while (buf[0] >= ceiling);
+    return buf[0] % n;
+  }
+  function chooseBank(previous, random = randomInt) {
+    const choices = BANKS.filter(b => b.id !== previous);
+    return choices[random(choices.length)].id;
+  }
+  const ONES = ["ZERO","ONE","TWO","THREE","FOUR","FIVE","SIX","SEVEN","EIGHT","NINE","TEN","ELEVEN","TWELVE","THIRTEEN","FOURTEEN","FIFTEEN","SIXTEEN","SEVENTEEN","EIGHTEEN","NINETEEN"];
+  const TENS = ["","","TWENTY","THIRTY","FORTY","FIFTY","SIXTY","SEVENTY","EIGHTY","NINETY"];
+  function smallNumber(n) {
+    if (n < 20) return ONES[n];
+    if (n < 100) return TENS[Math.floor(n/10)] + (n%10 ? " " + ONES[n%10] : "");
+    return ONES[Math.floor(n/100)] + " HUNDRED" + (n%100 ? " AND " + smallNumber(n%100) : "");
+  }
+  function integerWords(digits) {
+    if ((digits.length > 1 && digits[0] === "0") || digits.length > 15) return [...digits].map(d => ONES[+d]).join(" ");
+    if (/^0+$/.test(digits)) return "ZERO";
+    const scales = ["","THOUSAND","MILLION","BILLION","TRILLION"], parts = [];
+    for (let end=digits.length, scale=0; end>0; end-=3, scale++) {
+      const n = +digits.slice(Math.max(0,end-3),end);
+      if (n) parts.unshift(smallNumber(n) + (scales[scale] ? " " + scales[scale] : ""));
+    }
+    return parts.join(" ");
+  }
+  function numberWords(value) {
+    const [whole, fraction] = value.replace(/,/g,"").split(".");
+    return integerWords(whole) + (fraction !== undefined ? " POINT " + [...fraction].map(d=>ONES[+d]).join(" ") : "");
+  }
+  function normalize(raw) {
+    if (raw.length > MAX) throw new Error("Message too long. Maximum 100,000 characters.");
+    let text = raw.normalize("NFKD").replace(/[\u0300-\u036f]/g,"");
+    text = text.replace(/(?:\d{1,3}(?:,\d{3})+(?!\d)|\d+)(?:\.\d+)?/g, match => " " + numberWords(match) + " ");
+    text = text.replace(/['’‘]/g, "").replace(/[\p{P}\p{S}]/gu, " ").toUpperCase().replace(/\s+/g," ").trim();
+    if (/[^A-Z ]/.test(text)) throw new Error("Use English A–Z letters. Unsupported characters remain in the message.");
+    if (text.length > MAX) throw new Error("Prepared message exceeds 100,000 characters. Please shorten it.");
+    return text;
+  }
+  const mirror = text => text.replace(/[A-Z]/g, c => String.fromCharCode(155-c.charCodeAt(0)));
+  function encode(raw, bankID, now=Date.now(), random=randomInt) {
+    if (!byID(bankID)) throw new Error("Unknown hand bank.");
+    const prepared = normalize(raw);
+    if (!prepared) throw new Error("Enter a message containing letters or numbers.");
+    const start = windowStart(now), mapping = maps[bankID].forward;
+    const body = [...mirror(prepared)].map(c=> c === " " ? "789"[random(3)] : mapping[c]).join("");
+    const header = "[" + bankID + "-" + windowID(start) + "]";
+    return {text:header + " " + body, prepared, bankID, start};
+  }
+  function decode(raw, activeBankID, now=Date.now()) {
+    if (!byID(activeBankID)) throw new Error("A valid active hand bank is required to decode.");
+    if (raw.length > MAX + 1024) throw new Error("Transmission too long.");
+    const match = raw.trim().match(/^\[(RHB|BHB|LHB|FHB)-(\d{8})-(\d{4})\]\s*([\s\S]*)$/i);
+    if (!match) throw new Error("Include the complete v2 transmission, starting with its [BANK-DATE-TIME] ID. v1.1 messages are not supported.");
+    const bankID = match[1].toUpperCase(), start = parseWindow(match[2],match[3]);
+    if (now < start) throw new Error("This transmission's window has not started. Check your device clock.");
+    if (now >= start + WINDOW) throw new Error("Transmission expired. Decoding is only allowed during its original three-hour window.");
+    if (bankID !== activeBankID) throw new Error("Bank mismatch. This message requires " + bankID + ", but your active bank is " + activeBankID + ". Decoding refused.");
+    const body = match[4].replace(/\s/g,"").toUpperCase();
+    if (!body || body.length > MAX || /[^A-Z01789]/.test(body)) throw new Error("Invalid ciphertext. The body can contain only A–Z, 1, 0 and the space markers 7, 8, 9.");
+    const mapping = maps[bankID].reverse;
+    const egg = [...body].map(c=> /[789]/.test(c) ? " " : mapping[c]).join("");
+    if (/[01]/.test(egg)) throw new Error("This ciphertext does not match its bank. Check the bank ID and copied message.");
+    return {text:mirror(egg), bankID, start};
+  }
+  return Object.freeze({BANKS,SYMBOLS,WINDOW,OFFSET,MAX,byID,maps,windowStart,windowID,parseWindow,randomInt,chooseBank,normalize,mirror,encode,decode});
+})();
+</script>
+<script id="cipher-interface">
+"use strict";
+(() => {
+  const $ = id => document.getElementById(id);
+  const STORAGE_KEY = "janus.v2.encoder";
+  let mode="encode", encoder=null, lastResult=null, storageOK=true, busy=false;
+  function readSaved() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      return s && Janus.byID(s.bankID) && Number.isSafeInteger(s.start) && s.start === Janus.windowStart(s.start) ? s : null;
+    } catch { storageOK=false; return null; }
+  }
+  function save(s) {
+    try { localStorage.setItem(STORAGE_KEY,JSON.stringify(s)); } catch { storageOK=false; }
+    $("storage-note").hidden=storageOK;
+  }
+  function getEncoder(now=Date.now()) {
+    const start=Janus.windowStart(now), saved=readSaved();
+    if (saved && saved.start===start) encoder=saved;
+    else if (!encoder || encoder.start!==start) {
+      encoder={bankID:Janus.chooseBank((saved || encoder || {}).bankID), start}; save(encoder);
+    }
+    $("storage-note").hidden=storageOK;
+    return encoder;
+  }
+  function setStatus(message, kind="") { $("status").textContent=message; $("status").dataset.kind=kind; }
+  function timeLabel(start) { const d=new Date(start+Janus.OFFSET); return String(d.getUTCHours()).padStart(2,"0")+":00"; }
+  function refresh() {
+    const now=Date.now(), outgoing=getEncoder(now), start=Janus.windowStart(now);
+    const active = outgoing;
+    const bank=active ? Janus.byID(active.bankID) : null;
+    $("session-label").textContent="Active bank · locked";
+    $("active-name").textContent=bank ? bank.name+" Bank" : "Awaiting transmission";
+    $("active-code").textContent=bank ? bank.id+" / " : "";
+    $("window-label").textContent=timeLabel(start)+"–"+timeLabel(start+Janus.WINDOW)+" PERTH";
+    const seconds=Math.max(0,Math.ceil((start+Janus.WINDOW-now)/1000));
+    $("countdown").textContent=[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(n=>String(n).padStart(2,"0")).join(":");
+    $("progress-fill").style.width=((start+Janus.WINDOW-now)/Janus.WINDOW*100)+"%";
+    for (const b of Janus.BANKS) {
+      const selected=bank && b.id===bank.id;
+      $("bank-"+b.id).classList.toggle("active",!!selected);
+      $("state-"+b.id).textContent=selected ? "ACTIVE" : "";
+    }
+    if (lastResult && lastResult.start!==start) {
+      $("output-hint").textContent="This result belongs to a closed window. Its transmission can no longer be decoded in this app.";
     }
   }
-  return result;
-}
-
-function rowCipher(text) {
-  let result = "";
-
-  for (let char of text) {
-    const isLower = char >= 'a' && char <= 'z';
-    const upper = char.toUpperCase();
-
-    if (upper < 'A' || upper > 'Z') {
-      result += char;
-      continue;
-    }
-
-    // Special terminal pair: Y <-> Z.
-    // This makes the whole row cipher one-to-one and self-reversing.
-    if (upper === 'Y' || upper === 'Z') {
-      let swapped = upper === 'Y' ? 'Z' : 'Y';
-      result += isLower ? swapped.toLowerCase() : swapped;
-      continue;
-    }
-
-    const index = upper.charCodeAt(0) - 65;
-    const row = Math.floor(index / 2);
-    const column = index % 2;
-
-    // AB <-> CD, EF <-> GH, IJ <-> KL,
-    // MN <-> OP, QR <-> ST, UV <-> WX.
-    const newRow = (row % 2 === 0) ? row + 1 : row - 1;
-    const newIndex = newRow * 2 + column;
-
-    let newChar = String.fromCharCode(65 + newIndex);
-    result += isLower ? newChar.toLowerCase() : newChar;
+  function counts() {
+    $("input-count").textContent=$("input").value.length.toLocaleString()+" characters";
+    $("output-count").textContent=$("output").value.length.toLocaleString()+" characters";
+    $("copy-button").disabled=$("swap-button").disabled=!$("output").value;
+    const raw=$("input").value;
+    $("preview-box").hidden=mode!=="encode" || !raw;
+    if (mode==="encode" && raw) { try { $("prepared-text").textContent=Janus.normalize(raw) || "No letters or numbers remain."; } catch(e) { $("prepared-text").textContent=e.message; } }
   }
-
-  return result;
-}
-
-function compressRepeats(text, chooseSpace = () => "579"[Math.floor(Math.random() * 3)]) {
-  if (text.length > 100000) throw new Error("Message too long (maximum 100,000 characters).");
-  if (/[0-9\[\]]/.test(text)) throw new Error("Write numbers as words and omit square brackets in original messages.");
-  let result = "";
-  for (let i = 0; i < text.length;) {
-    const char = text[i];
-    if (/[A-Za-z]/.test(char)) {
-      let count = 1;
-      while (text[i + count] === char) count++;
-      if (count >= 2 && count <= 4) {
-        result += char + (text[i + count] === " " ? "[" + count + "]" : count);
-      } else {
-        result += char.repeat(count);
-      }
-      i += count;
-    } else {
-      result += char === " " ? chooseSpace() : char;
-      i++;
+  function resetOutput() { $("output").value=""; lastResult=null; counts(); }
+  function setMode(next, preserveInput=true) {
+    mode=next; resetOutput();
+    if (!preserveInput) $("input").value="";
+    $("encode-tab").setAttribute("aria-pressed",String(mode==="encode"));
+    $("decode-tab").setAttribute("aria-pressed",String(mode==="decode"));
+    $("input-label").textContent=mode==="encode" ? "YOUR MESSAGE" : "TRANSMISSION + ID";
+    $("output-label").textContent=mode==="encode" ? "TRANSMISSION" : "DECODED MESSAGE";
+    $("input").maxLength=mode==="encode" ? Janus.MAX : Janus.MAX+1024;
+    $("input").placeholder=mode==="encode" ? "Write your message here..." : "Paste the complete transmission, including [BANK-DATE-TIME]...";
+    $("output").placeholder=mode==="encode" ? "Your encoded transmission will appear here." : "Your decoded message will appear here.";
+    $("input-hint").textContent=mode==="encode" ? "Numbers become words. Punctuation is omitted. Letters become uppercase." : "The message bank must match your active bank and its original window must still be open.";
+    $("output-hint").textContent=mode==="encode" ? "The bank ID travels with your message. Copy the complete transmission." : "Numbers return as words. Punctuation and original letter case are not restored.";
+    $("run-button").textContent=mode==="encode" ? "Encode message" : "Decode transmission";
+    $("flow-label").textContent=mode==="encode" ? "01 MIRROR / 02 HAND BANK" : "01 REVERSE BANK / 02 MIRROR";
+    setStatus(mode==="encode" ? "Ready to encode." : "Ready. Decoding is locked to your active bank and the current window."); counts(); refresh();
+  }
+  async function run() {
+    if (busy) return;
+    busy=true; $("run-button").disabled=true;
+    const perform=()=>{
+      const now=Date.now();
+      const result=mode==="encode" ? Janus.encode($("input").value,getEncoder(now).bankID,now) : Janus.decode($("input").value,getEncoder(now).bankID,now);
+      lastResult={...result,mode}; $("output").value=result.text;
+      $("output-hint").textContent=mode==="encode" ? "Copy the full transmission. Valid until "+timeLabel(result.start+Janus.WINDOW)+" Perth time." : "Decoded using "+Janus.byID(result.bankID).name+" Bank. Numbers are written as words.";
+      setStatus(mode==="encode" ? "Encoded. Bank ID attached; spaces use random 7, 8 or 9." : "Decoded. Bank and current window verified.","success"); counts(); refresh();
+    };
+    try {
+      if (navigator.locks) await navigator.locks.request(STORAGE_KEY,perform);
+      else perform();
+    } catch(e) { resetOutput(); setStatus(e.message,"error"); refresh(); }
+    finally { busy=false; $("run-button").disabled=false; }
+  }
+  async function copy() {
+    const value=$("output").value;
+    if (!value) return;
+    try { await navigator.clipboard.writeText(value); setStatus("Copied to clipboard.","success"); }
+    catch {
+      const box=$("output"); box.focus(); box.select(); box.setSelectionRange(0,value.length);
+      try { if (!document.execCommand("copy")) throw new Error(); setStatus("Copied to clipboard.","success"); }
+      catch { setStatus("Copy is unavailable here. The result is selected; use your device's Copy command."); }
     }
   }
-  return result;
-}
-
-function expandRepeats(text) {
-  if (text.length > 100000) throw new Error("Message too long (maximum 100,000 characters).");
-  let result = "";
-  for (let i = 0; i < text.length;) {
-    const char = text[i++];
-    if (/[579]/.test(char)) {
-      result += " ";
-    } else if (/[A-Za-z]/.test(char)) {
-      let count = 1;
-      if (text[i] === "[") {
-        if (!/^[234]\][579]/.test(text.slice(i + 1))) throw new Error("Bracketed repeats must be [2], [3], or [4] immediately before a space marker.");
-        count = Number(text[i + 1]);
-        i += 3;
-      } else if (/[234]/.test(text[i] || "")) {
-        count = Number(text[i++]);
-        if (/[579]/.test(text[i] || "")) throw new Error("Use brackets around a repeat count immediately before a space marker.");
-      }
-      result += char.repeat(count);
-    } else {
-      if (/[0-9\[\]]/.test(char)) throw new Error("Invalid ciphertext digit or bracket.");
-      result += char;
-    }
-    if (result.length > 100000) throw new Error("Decoded message too long (maximum 100,000 characters).");
+  Janus.BANKS.forEach(b=>{
+    const card=document.createElement("article"); card.className="bank"; card.id="bank-"+b.id;
+    card.innerHTML='<div class="bank-top"><span class="bank-code">'+b.id+'</span><span class="bank-state" id="state-'+b.id+'"></span></div><h3>'+b.name+'</h3><div class="bits">'+b.stamp+'</div>';
+    $("banks").appendChild(card);
+  });
+  for (let row=0;row<14;row++) {
+    const tr=document.createElement("tr");
+    tr.innerHTML='<th scope="row">'+String(row+1).padStart(2,"0")+'</th><td>'+Janus.SYMBOLS[row*2]+' '+Janus.SYMBOLS[row*2+1]+'</td>'+Janus.BANKS.map(b=>'<td>'+b.stamp[row]+'</td>').join("");
+    $("key-rows").appendChild(tr);
   }
-  return result;
-}
-
-function encodeMessage() {
-  const input = document.getElementById("input").value;
-  try {
-    document.getElementById("output").value = compressRepeats(rowCipher(atbash(input)));
-    setStatus("Encoded. Spaces randomly use 5, 7, or 9.");
-  } catch (error) {
-    document.getElementById("output").value = "";
-    setStatus(error.message);
-  }
-}
-
-function decodeMessage() {
-  const input = document.getElementById("input").value;
-  try {
-    const stage1 = expandRepeats(input);
-    const stage2 = rowCipher(stage1);
-    document.getElementById("output").value = atbash(stage2);
-    setStatus("Decoded.");
-  } catch (error) {
-    document.getElementById("output").value = "";
-    setStatus(error.message);
-  }
-}
-
-async function copyResult() {
-  const output = document.getElementById("output").value;
-  if (!output) return setStatus("Nothing to copy.");
-
-  try {
-    await navigator.clipboard.writeText(output);
-    setStatus("Copied.");
-  } catch (e) {
-    const box = document.getElementById("output");
-    box.removeAttribute("readonly");
-    box.select();
-    document.execCommand("copy");
-    box.setAttribute("readonly", "");
-    setStatus("Copied.");
-  }
-}
-
-function swapResult() {
-  document.getElementById("input").value = document.getElementById("output").value;
-  document.getElementById("output").value = "";
-  setStatus("Output moved to input.");
-}
-
-function clearAll() {
-  document.getElementById("input").value = "";
-  document.getElementById("output").value = "";
-  setStatus("");
-}
-
-function setStatus(msg) {
-  document.getElementById("status").textContent = msg;
-}
-
-// Check the reversible mapping and separator-aware compression.
-(function(){
-  const roundTrip = s => atbash(rowCipher(expandRepeats(compressRepeats(rowCipher(atbash(s))))));
-  const tests = ["HELLO", "books", "i can tell you", "AAAAA", "AAAAAA ", "YAZY", "XYZ", "  tell  ", "ball\nbook!", ""];
-  if (tests.some(s => roundTrip(s) !== s) ||
-      compressRepeats("xx xxx xxxxx ", () => "7") !== "x[2]7x[3]7xxxxx7") {
-    setStatus("Cipher self-test failed.");
-  }
+  $("encode-tab").addEventListener("click",()=>{if(!busy)setMode("encode");});
+  $("decode-tab").addEventListener("click",()=>{if(!busy)setMode("decode");});
+  $("run-button").addEventListener("click",run);
+  $("copy-button").addEventListener("click",copy);
+  $("clear-button").addEventListener("click",()=>{if(busy)return;$("input").value="";setMode(mode);$("input").focus();});
+  $("swap-button").addEventListener("click",()=>{if(busy)return;const value=$("output").value;if(!value)return;$("input").value=value;setMode(mode==="encode"?"decode":"encode");$("input").focus();});
+  $("input").addEventListener("input",counts);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh();});
+  window.addEventListener("storage",e=>{if(e.key===STORAGE_KEY)refresh();});
+  setMode("encode"); setInterval(refresh,1000);
 })();
 </script>
 </body>
